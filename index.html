@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sapling — AI Tree Recommendation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #12211a;
+    --bg-deep: #0c1811;
+    --panel: #1c2f24;
+    --panel-line: #2c4436;
+    --text: #eef1e6;
+    --text-dim: #a9baab;
+    --gold: #dba548;
+    --gold-dim: #7a6132;
+    --clay: #b5652b;
+    --moss: #7d9d6d;
+    --danger: #c2694a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, #1d3527 0%, transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 10%, #23392b 0%, transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Work Sans', sans-serif;
+    min-height:100vh;
+    padding:48px 24px 80px;
+  }
+  .wrap{max-width:1080px;margin:0 auto;}
+
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--gold);
+    display:flex;align-items:center;gap:10px;
+    margin-bottom:14px;
+  }
+  .eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--gold);display:inline-block;box-shadow:0 0 10px var(--gold);}
+
+  h1{
+    font-family:'Fraunces', serif;
+    font-optical-sizing:auto;
+    font-weight:500;
+    font-size:clamp(32px, 5vw, 52px);
+    line-height:1.08;
+    margin:0 0 14px;
+    letter-spacing:-0.01em;
+  }
+  h1 em{font-style:italic;color:var(--moss);font-weight:400;}
+
+  .lede{
+    color:var(--text-dim);
+    font-size:16px;
+    max-width:620px;
+    line-height:1.6;
+    margin-bottom:44px;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap:22px;
+  }
+  @media (max-width:820px){ .grid{grid-template-columns:1fr;} }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--panel-line);
+    border-radius:14px;
+    padding:28px;
+    position:relative;
+    overflow:hidden;
+  }
+  .panel-label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    margin-bottom:20px;
+    display:flex;
+    justify-content:space-between;
+  }
+
+  .field{margin-bottom:20px;}
+  .field label{
+    display:block;
+    font-size:13px;
+    color:var(--text-dim);
+    margin-bottom:8px;
+  }
+  .field .val{
+    font-family:'JetBrains Mono', monospace;
+    color:var(--gold);
+  }
+  select, input[type=range]{
+    width:100%;
+  }
+  select{
+    background:var(--bg-deep);
+    color:var(--text);
+    border:1px solid var(--panel-line);
+    border-radius:8px;
+    padding:10px 12px;
+    font-family:'Work Sans', sans-serif;
+    font-size:14px;
+  }
+  input[type=range]{
+    -webkit-appearance:none;
+    height:4px;
+    background:var(--panel-line);
+    border-radius:2px;
+    outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:16px;height:16px;border-radius:50%;
+    background:var(--gold);
+    border:3px solid var(--bg-deep);
+    cursor:pointer;
+    box-shadow:0 0 0 1px var(--gold);
+  }
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+
+  button{
+    width:100%;
+    padding:14px;
+    margin-top:8px;
+    border:none;
+    border-radius:8px;
+    background:linear-gradient(180deg, var(--gold) 0%, #c8933c 100%);
+    color:#1a1408;
+    font-family:'Work Sans', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    letter-spacing:.02em;
+    cursor:pointer;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  button:hover{transform:translateY(-1px); box-shadow:0 8px 20px -6px rgba(219,165,72,.45);}
+  button:active{transform:translateY(0px);}
+
+  /* Result panel */
+  .result-top{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:16px;
+  }
+  .species-name{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-size:30px;
+    margin:2px 0 4px;
+  }
+  .species-tag{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:var(--moss);
+    letter-spacing:.05em;
+  }
+  .survival-num{
+    font-family:'Fraunces', serif;
+    font-size:44px;
+    font-weight:500;
+    color:var(--gold);
+    line-height:1;
+    text-align:right;
+  }
+  .survival-num span{font-size:20px; opacity:.7;}
+  .survival-label{
+    text-align:right;
+    font-size:11px;
+    color:var(--text-dim);
+    font-family:'JetBrains Mono', monospace;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+  }
+
+  .tree-stage{
+    display:flex;
+    justify-content:center;
+    margin:18px 0 6px;
+  }
+
+  .alt-list{margin-top:18px;}
+  .alt-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    font-size:13px;
+    padding:7px 0;
+    border-top:1px solid var(--panel-line);
+  }
+  .alt-row .name{width:100px; color:var(--text-dim); flex-shrink:0;}
+  .alt-bar-track{flex:1; height:6px; background:var(--bg-deep); border-radius:3px; overflow:hidden;}
+  .alt-bar-fill{height:100%; background:var(--moss); border-radius:3px; transition:width .6s ease;}
+  .alt-score{width:38px; text-align:right; font-family:'JetBrains Mono', monospace; color:var(--text-dim); font-size:12px;}
+
+  .info-strip{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    margin-top:6px;
+  }
+  .info-box{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:var(--bg-deep);
+    border:1px solid var(--panel-line);
+    border-radius:10px;
+    padding:12px;
+  }
+  .info-icon{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    color:var(--gold);
+    border:1px solid var(--gold-dim);
+    border-radius:6px;
+    padding:4px 6px;
+    flex-shrink:0;
+  }
+  .info-n{font-family:'Fraunces', serif; font-size:17px; color:var(--text);}
+  .info-l{font-size:11px; color:var(--text-dim); line-height:1.3; margin-top:2px;}
+
+  .fleet-impact{
+    font-size:13px;
+    color:var(--moss);
+    font-family:'JetBrains Mono', monospace;
+    background:var(--bg-deep);
+    border:1px solid var(--panel-line);
+    border-radius:8px;
+    padding:10px 12px;
+    margin-bottom:6px;
+  }
+
+  .note{
+    margin-top:16px;
+    font-size:12px;
+    color:var(--text-dim);
+    line-height:1.6;
+    border-top:1px dashed var(--panel-line);
+    padding-top:14px;
+  }
+
+  .footer-strip{
+    margin-top:36px;
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:16px;
+  }
+  @media (max-width:820px){ .footer-strip{grid-template-columns:1fr 1fr;} }
+  .stat{
+    border-top:1px solid var(--panel-line);
+    padding-top:12px;
+  }
+  .stat .n{font-family:'Fraunces', serif; font-size:24px; color:var(--gold);}
+  .stat .l{font-size:12px; color:var(--text-dim); margin-top:2px;}
+
+  .fade-in{animation:fadeIn .5s ease both;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Environmental Conservation &middot; Tree Plantation AI</div>
+  <h1>Match every sapling<br><em>to ground it will survive on.</em></h1>
+  <p class="lede">
+    Enter a plantation site's soil and climate data. The model — trained on
+    site-suitability data for 10 native species — recommends the species
+    most likely to thrive there, and estimates its survival rate.
+  </p>
+
+  <div class="grid">
+    <!-- INPUT PANEL -->
+    <div class="panel">
+      <div class="panel-label"><span>Site Survey</span><span>01</span></div>
+
+      <div class="field">
+        <label>Region</label>
+        <select id="region">
+          <option>North India</option>
+          <option>South India</option>
+          <option>East India</option>
+          <option selected>West India</option>
+          <option>Central India</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Soil type</label>
+        <select id="soil">
+          <option>Sandy</option>
+          <option>Clayey</option>
+          <option>Loamy</option>
+          <option selected>Black</option>
+          <option>Red</option>
+          <option>Alluvial</option>
+        </select>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label>Rainfall <span class="val" id="rainVal">1100 mm</span></label>
+          <input type="range" id="rain" min="250" max="3200" step="10" value="1100">
+        </div>
+        <div class="field">
+          <label>Temperature <span class="val" id="tempVal">29 &deg;C</span></label>
+          <input type="range" id="temp" min="14" max="43" step="1" value="29">
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label>Soil pH <span class="val" id="phVal">6.8</span></label>
+          <input type="range" id="ph" min="4.8" max="8.8" step="0.1" value="6.8">
+        </div>
+        <div class="field">
+          <label>Sunlight <span class="val" id="sunVal">7.5 hrs</span></label>
+          <input type="range" id="sun" min="3.5" max="10.5" step="0.5" value="7.5">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Care / irrigation quality <span class="val" id="careVal">0.85</span></label>
+        <input type="range" id="care" min="0.5" max="1.0" step="0.05" value="0.85">
+      </div>
+
+      <button onclick="runRecommendation()">Recommend species</button>
+    </div>
+
+    <!-- RESULT PANEL -->
+    <div class="panel" id="resultPanel">
+      <div class="panel-label"><span>Recommendation</span><span>02</span></div>
+
+      <div class="result-top">
+        <div>
+          <div class="species-tag" id="speciesTag">BEST MATCH</div>
+          <div class="species-name" id="speciesName">—</div>
+        </div>
+        <div>
+          <div class="survival-num" id="survivalNum">—<span>%</span></div>
+          <div class="survival-label">Est. survival</div>
+        </div>
+      </div>
+
+      <div class="tree-stage" id="treeStage"></div>
+
+      <div class="info-strip">
+        <div class="info-box">
+          <div class="info-icon">CO2</div>
+          <div>
+            <div class="info-n" id="co2Num">—</div>
+            <div class="info-l">kg CO&sub2; absorbed / year (mature tree)</div>
+          </div>
+        </div>
+        <div class="info-box">
+          <div class="info-icon">SZN</div>
+          <div>
+            <div class="info-n" id="seasonNum">—</div>
+            <div class="info-l" id="seasonNote">Best planting window</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:16px;">
+        <label>Planned saplings at this site <span class="val" id="fleetVal">50</span></label>
+        <input type="range" id="fleet" min="1" max="500" step="1" value="50">
+      </div>
+      <div class="fleet-impact" id="fleetImpact"></div>
+
+      <div class="alt-list" id="altList"></div>
+
+      <div class="note">
+        This demo runs the same site-suitability logic used to generate the
+        project's training data and reflected in the trained
+        Random-Forest model (see <code>train_model.py</code>) — species
+        ideal ranges for rainfall, temperature, pH and soil type. CO&sub2;
+        figures are educational estimates from published afforestation
+        references, not exact measurements.
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-strip">
+    <div class="stat"><div class="n">1,500</div><div class="l">training samples</div></div>
+    <div class="stat"><div class="n">10</div><div class="l">tree species modeled</div></div>
+    <div class="stat"><div class="n">61%</div><div class="l">classifier accuracy</div></div>
+    <div class="stat"><div class="n">0.64</div><div class="l">survival model R&sup2;</div></div>
+  </div>
+
+</div>
+
+<script>
+// ---- Same species profile & scoring logic as data/generate_dataset.py ----
+const SPECIES_PROFILE = {
+  "Neem":       {rain:[400,1200],  temp:[20,40], ph:[6.2,8.5], soil:["Sandy","Red","Alluvial"]},
+  "Banyan":     {rain:[700,2500],  temp:[18,38], ph:[6.0,7.5], soil:["Loamy","Alluvial","Clayey"]},
+  "Mango":      {rain:[750,2500],  temp:[21,35], ph:[5.5,7.5], soil:["Alluvial","Loamy","Red"]},
+  "Teak":       {rain:[1200,2500], temp:[20,35], ph:[6.5,7.5], soil:["Black","Alluvial","Loamy"]},
+  "Bamboo":     {rain:[1000,3000], temp:[18,36], ph:[5.5,7.0], soil:["Loamy","Clayey","Alluvial"]},
+  "Peepal":     {rain:[500,2000],  temp:[18,38], ph:[6.0,8.0], soil:["Loamy","Alluvial","Sandy"]},
+  "Gulmohar":   {rain:[600,1800],  temp:[22,40], ph:[6.0,7.8], soil:["Sandy","Red","Loamy"]},
+  "Eucalyptus": {rain:[500,1500],  temp:[15,35], ph:[5.5,7.5], soil:["Red","Sandy","Black"]},
+  "Babul":      {rain:[300,900],   temp:[22,42], ph:[6.5,8.5], soil:["Sandy","Black","Red"]},
+  "Mahogany":   {rain:[1400,3000], temp:[20,34], ph:[5.5,7.0], soil:["Clayey","Loamy","Alluvial"]},
+};
+
+// ---- Same reference data as species_reference.py ----
+const CO2_ABSORPTION_KG_YEAR = {
+  Neem:20, Banyan:35, Mango:20, Teak:22, Bamboo:12,
+  Peepal:28, Gulmohar:18, Eucalyptus:25, Babul:15, Mahogany:25,
+};
+const PLANTING_SEASON = {
+  "North India":   {months:"July - August",        note:"Plant at monsoon onset; avoid peak winter frost."},
+  "South India":   {months:"June-July / Oct-Nov",   note:"SW monsoon or the NE (retreating) monsoon window."},
+  "East India":    {months:"June - July",           note:"Plant with the SW monsoon onset."},
+  "West India":    {months:"June - July",           note:"Plant at monsoon onset; avoid summer heat stress."},
+  "Central India": {months:"June - July",           note:"Plant at monsoon onset for best root establishment."},
+};
+
+function rangeScore(val, lo, hi){
+  if(val >= lo && val <= hi) return 1.0;
+  const span = hi - lo;
+  const dist = val < lo ? (lo - val) : (val - hi);
+  return Math.max(0, 1 - dist / (span + 1e-6));
+}
+
+function scoreSpecies(name, rain, temp, ph, soil, sun){
+  const p = SPECIES_PROFILE[name];
+  let s = 0;
+  s += 0.35 * rangeScore(rain, p.rain[0], p.rain[1]);
+  s += 0.30 * rangeScore(temp, p.temp[0], p.temp[1]);
+  s += 0.15 * rangeScore(ph, p.ph[0], p.ph[1]);
+  s += 0.15 * (p.soil.includes(soil) ? 1.0 : 0.25);
+  s += 0.05 * Math.min(sun / 8.0, 1.0);
+  return s;
+}
+
+function treeSVG(pct, colorMain, colorLeaf){
+  // canopy fullness scales with survival %
+  const leafCount = Math.round(6 + (pct/100) * 14);
+  let leaves = "";
+  const positions = [];
+  const cx = 90, cy = 78, rBase = 16, rMax = 58;
+  for(let i=0;i<leafCount;i++){
+    const angle = (i / leafCount) * Math.PI * 2 + (i%2)*0.3;
+    const rad = rBase + Math.random()*(rMax-rBase)*(pct/100 + 0.3);
+    const x = cx + Math.cos(angle) * rad;
+    const y = (cy-18) + Math.sin(angle) * rad * 0.72;
+    const r = 8 + Math.random()*7;
+    leaves += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${colorLeaf}" opacity="${(0.55+Math.random()*0.35).toFixed(2)}"/>`;
+  }
+  return `
+  <svg width="220" height="180" viewBox="0 0 180 150" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="90" cy="140" rx="55" ry="7" fill="#0c1811" opacity="0.5"/>
+    <rect x="84" y="90" width="12" height="46" rx="4" fill="${colorMain}"/>
+    <path d="M84 118 Q70 122 62 132" stroke="${colorMain}" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M96 118 Q112 122 120 130" stroke="${colorMain}" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <g>${leaves}</g>
+  </svg>`;
+}
+
+function runRecommendation(){
+  const region = document.getElementById('region').value;
+  const soil = document.getElementById('soil').value;
+  const rain = parseFloat(document.getElementById('rain').value);
+  const temp = parseFloat(document.getElementById('temp').value);
+  const ph = parseFloat(document.getElementById('ph').value);
+  const sun = parseFloat(document.getElementById('sun').value);
+  const care = parseFloat(document.getElementById('care').value);
+
+  const scores = {};
+  for(const name in SPECIES_PROFILE){
+    scores[name] = scoreSpecies(name, rain, temp, ph, soil, sun);
+  }
+  const ranked = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  const [bestName, bestScore] = ranked[0];
+
+  let survival = 100 * (0.65*bestScore + 0.35*care);
+  survival = Math.max(20, Math.min(99, survival));
+
+  document.getElementById('speciesName').textContent = bestName;
+  document.getElementById('survivalNum').innerHTML = survival.toFixed(1) + '<span>%</span>';
+
+  let colorMain = "#6b4226", colorLeaf = "#7d9d6d";
+  if(survival < 55){ colorLeaf = "#c2694a"; }
+  else if(survival < 75){ colorLeaf = "#c9a24a"; }
+
+  document.getElementById('treeStage').innerHTML = treeSVG(survival, colorMain, colorLeaf);
+  document.getElementById('treeStage').classList.remove('fade-in');
+  void document.getElementById('treeStage').offsetWidth;
+  document.getElementById('treeStage').classList.add('fade-in');
+
+  const altHtml = ranked.slice(0,5).map(([name, sc])=>{
+    const pct = Math.round(sc*100);
+    return `<div class="alt-row">
+      <div class="name">${name}</div>
+      <div class="alt-bar-track"><div class="alt-bar-fill" style="width:${pct}%"></div></div>
+      <div class="alt-score">${pct}</div>
+    </div>`;
+  }).join("");
+  document.getElementById('altList').innerHTML = altHtml;
+
+  // CO2 + planting season
+  const co2 = CO2_ABSORPTION_KG_YEAR[bestName] || 20;
+  const season = PLANTING_SEASON[region] || {months:"June - September", note:"General monsoon planting window."};
+  document.getElementById('co2Num').textContent = co2 + ' kg/yr';
+  document.getElementById('seasonNum').textContent = season.months;
+  document.getElementById('seasonNote').textContent = season.note;
+
+  updateFleetImpact(bestName, co2);
+
+  document.getElementById('resultPanel').classList.remove('fade-in');
+  void document.getElementById('resultPanel').offsetWidth;
+  document.getElementById('resultPanel').classList.add('fade-in');
+
+  // store last result for PDF export
+  window._lastResult = { region, soil, rain, temp, ph, sun, care, bestName, survival, co2, season };
+}
+
+function updateFleetImpact(species, co2PerTree){
+  const n = parseInt(document.getElementById('fleet').value, 10);
+  const totalKg = n * co2PerTree;
+  document.getElementById('fleetImpact').textContent =
+    `${n} × ${species} saplings ≈ ${totalKg.toLocaleString()} kg CO₂ absorbed / year (~${(totalKg/1000).toFixed(2)} tonnes)`;
+}
+
+document.getElementById('fleet').addEventListener('input', e=>{
+  document.getElementById('fleetVal').textContent = e.target.value;
+  if(window._lastResult) updateFleetImpact(window._lastResult.bestName, window._lastResult.co2);
+});
+
+// live slider labels
+document.getElementById('rain').addEventListener('input', e=> document.getElementById('rainVal').textContent = e.target.value + ' mm');
+document.getElementById('temp').addEventListener('input', e=> document.getElementById('tempVal').textContent = e.target.value + ' \u00B0C');
+document.getElementById('ph').addEventListener('input', e=> document.getElementById('phVal').textContent = e.target.value);
+document.getElementById('sun').addEventListener('input', e=> document.getElementById('sunVal').textContent = e.target.value + ' hrs');
+document.getElementById('care').addEventListener('input', e=> document.getElementById('careVal').textContent = e.target.value);
+
+// run once on load
+runRecommendation();
+</script>
+</body>
+</html>
